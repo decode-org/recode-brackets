@@ -8,11 +8,13 @@ define(function (require, exports, module) {
     var CommandManager = brackets.getModule('command/CommandManager'),
         Menus = brackets.getModule('command/Menus'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
-        DocumentManager = brackets.getModule('document/DocumentManager');
+        DocumentManager = brackets.getModule('document/DocumentManager'),
+        FileSystem = brackets.getModule('filesystem/FileSystem');
 
     var Recoder = function() {
         this.currentDocument = null;
         this.recording = false;
+        this.saveDir = null;
     };
 
     Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
@@ -41,10 +43,24 @@ define(function (require, exports, module) {
     };
 
     Recoder.prototype.start = function() {
-        this.recording = true;
+        var self = this;
+        FileSystem.showOpenDialog(false, true, "Choose a folder to save in", '', null, function(error, files) {
+            if ((error) || (files.length < 1)) {
+                // Do something about this
+                return;
+            }
+            FileSystem.resolve(files[0], function(error, entry, stats) {
+                if ((error) || (!stats.isDirectory)) {
+                    // Do something about this
+                    return
+                }
+                self.recording = true;
+                self.saveDir = entry.fullPath;
 
-        MainViewManager.on('currentFileChange', this.onFileChange);
-        this.addDocument();
+                MainViewManager.on('currentFileChange', self.onFileChange);
+                self.addDocument();
+            });
+        });
     };
 
     Recoder.prototype.stop = function() {
