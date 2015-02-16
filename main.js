@@ -10,57 +10,64 @@ define(function (require, exports, module) {
         MainViewManager = brackets.getModule('view/MainViewManager'),
         DocumentManager = brackets.getModule('document/DocumentManager');
 
-    var Recoder = {
-        onFileChange: function(e, newFile, newPaneId, oldFile, oldPaneId) {
-            Recoder.removeDocument();
-            Recoder.addDocument();
-        },
-        onTextChange: function(e, document, changelist) {
-            console.log(changelist);
-        },
-        addDocument: function() {
-            Recoder.currentDocument = DocumentManager.getCurrentDocument();
-            if (Recoder.currentDocument) {
-                Recoder.currentDocument.addRef();
-                Recoder.currentDocument.on('change', Recoder.onTextChange);
-            }
-        },
-        removeDocument: function() {
-            if (Recoder.currentDocument) {
-                Recoder.currentDocument.off('change', Recoder.onTextChange);
-                Recoder.currentDocument.releaseRef();
-            }
-            Recoder.currentDocument = null;
-        },
-        currentDocument: null,
-        recording: false
+    var Recoder = function() {
+        this.currentDocument = null;
+        this.recording = false;
     };
+
+    Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
+        this.removeDocument();
+        this.addDocument();
+    };
+
+    Recoder.prototype.onTextChange = function(e, document, changelist) {
+        console.log(changelist);
+    };
+
+    Recoder.prototype.addDocument = function() {
+        this.currentDocument = DocumentManager.getCurrentDocument();
+        if (this.currentDocument) {
+            this.currentDocument.addRef();
+            this.currentDocument.on('change', this.onTextChange);
+        }
+    };
+
+    Recoder.prototype.removeDocument = function() {
+        if (this.currentDocument) {
+            this.currentDocument.off('change', this.onTextChange);
+            this.currentDocument.releaseRef();
+        }
+        this.currentDocument = null;
+    };
+
+    Recoder.prototype.start = function() {
+        this.recording = true;
+
+        MainViewManager.on('currentFileChange', this.onFileChange);
+        this.addDocument();
+    };
+
+    Recoder.prototype.stop = function() {
+        this.recording = false;
+
+        // Unbind events
+        MainViewManager.off('currentFileChange', this.onFileChange);
+        this.removeDocument();
+    };
+
+
+
+    var recoder = new Recoder();
 
     // Function to run when the menu item is clicked
     function handleRecode() {
-        if (!Recoder.recording) {
-            startRecode();
+        if (!recoder.recording) {
+            recoder.start();
             command.setName('Stop Recoding');
         } else {
-            stopRecode();
+            recoder.stop();
             command.setName('Recode');
         }
-    }
-
-    function startRecode() {
-        Recoder.recording = true;
-
-        // Bind events
-        MainViewManager.on('currentFileChange', Recoder.onFileChange);
-        Recoder.addDocument();
-    }
-
-    function stopRecode() {
-        Recoder.recording = false;
-
-        // Unbind events
-        MainViewManager.off('currentFileChange', Recoder.onFileChange);
-        Recoder.removeDocument();
     }
 
     // First, register a command - a UI-less object associating an id to a handler
