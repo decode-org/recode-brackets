@@ -9,12 +9,16 @@ define(function (require, exports, module) {
         Menus = brackets.getModule('command/Menus'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
         DocumentManager = brackets.getModule('document/DocumentManager'),
-        FileSystem = brackets.getModule('filesystem/FileSystem');
+        FileSystem = brackets.getModule('filesystem/FileSystem'),
+        ProjectManager = brackets.getModule('project/ProjectManager'),
+        Dialogs = brackets.getModule('widgets/Dialogs'),
+        DefaultDialogs = brackets.getModule('widgets/DefaultDialogs');
 
     var Recoder = function() {
         this.currentDocument = null;
         this.recording = false;
         this.saveDir = null;
+        this.startTime = null;
     };
 
     Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
@@ -42,24 +46,42 @@ define(function (require, exports, module) {
         this.currentDocument = null;
     };
 
-    Recoder.prototype.start = function() {
+    Recoder.prototype.start = function(callback) {
         var self = this;
-        FileSystem.showOpenDialog(false, true, "Choose a folder to save in", '', null, function(error, files) {
-            if ((error) || (files.length < 1)) {
-                // Do something about this
+        var now = new Date();
+        var formatDate = (now.getFullYear()) + '-' + (now.getMonth() + 1) + '-' + (now.getDate()) + '_' + (now.getHours()) + '-' + (now.getMinutes()) + '-' + (now.getSeconds());
+        var recodeFolder = ProjectManager.getProjectRoot().fullPath + 'recode-sessions/';
+
+        var startRecode = function startRecode() {
+            self.recording = true;
+
+            MainViewManager.on('currentFileChange', self.onFileChange);
+            self.addDocument();
+
+            callback();
+        };
+
+        var makeDirectory = function makeDirectory() {
+            self.startTime = now.getTime();
+            self.saveDir = recodeFolder + formatDate + '/';
+            console.log(self.saveDir);
+
+            ProjectManager
+                .createNewItem(ProjectManager.getProjectRoot(), 'recode-sessions/' + formatDate + '/', true, true);
+                .done(startRecode);
+        };
+
+        FileSystem.resolve(recodeFolder, function(error, file, stats) {
+            if ((error) && (error !== 'NotFound')) {
+                Dialogs.showModalDialog(DefaultDialogs.DIALOG_ID_ERROR, 'Error', 'Something went wrong when trying to find the recode-sessions folder: ' + error);
                 return;
             }
-            FileSystem.resolve(files[0], function(error, entry, stats) {
-                if ((error) || (!stats.isDirectory)) {
-                    // Do something about this
-                    return
-                }
-                self.recording = true;
-                self.saveDir = entry.fullPath;
 
-                MainViewManager.on('currentFileChange', self.onFileChange);
-                self.addDocument();
-            });
+            if (file.isDirectory) {
+                makeDirectory();
+            } else {
+                Dialogs.showModalDialog(DefaultDialogs.DIALOG_ID_ERROR, 'Save Error', 'The entry "recode-sessions" at project root must be a directory, currently it is not.');
+            }
         });
     };
 
@@ -78,8 +100,9 @@ define(function (require, exports, module) {
     // Function to run when the menu item is clicked
     function handleRecode() {
         if (!recoder.recording) {
-            recoder.start();
-            command.setName('Stop Recoding');
+            recoder.start(function() {
+                command.setName('Stop Recoding');
+            });
         } else {
             recoder.stop();
             command.setName('Recode');
