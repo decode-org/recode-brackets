@@ -22,13 +22,14 @@ define(function (require, exports, module) {
         this.recording = false;
         this.saveDir = null;
         this.startTime = null;
+        this.trackedFiles = [];
 
         this.onTextChangeProxy = function() {
-            Recoder.prototype.onTextChange.call(self, arguments);
+            Recoder.prototype.onTextChange.apply(self, arguments);
         };
 
         this.onFileChangeProxy = function() {
-            Recoder.prototype.onFileChange.call(self, arguments);
+            Recoder.prototype.onFileChange.apply(self, arguments);
         }
     };
 
@@ -43,8 +44,16 @@ define(function (require, exports, module) {
 
     Recoder.prototype.addDocument = function() {
         this.currentDocument = DocumentManager.getCurrentDocument();
+        console.log(this.currentDocument);
         if (this.currentDocument) {
-            console.log(this.currentDocument);
+            if (this.trackedFiles.indexOf(this.currentDocument.file.fullPath) === -1) {
+                this.trackedFiles.push(this.currentDocument.file.fullPath);
+                var path = this.saveDir + ProjectManager.makeProjectRelativeIfPossible(this.currentDocument.file.fullPath).replace(/\//g, '--');
+                var file = FileSystem.getFileForPath(path);
+                file.write(this.currentDocument.getText(), function(error, stats) {
+                    console.error("Error saving new Recode file: " + error);
+                });
+            }
             this.currentDocument.addRef();
             this.currentDocument.on('change', this.onTextChangeProxy);
         }
@@ -102,6 +111,7 @@ define(function (require, exports, module) {
 
         // Unbind events
         MainViewManager.off('currentFileChange', this.onFileChangeProxy);
+        this.trackedFiles = [];
         this.removeDocument();
     };
 
