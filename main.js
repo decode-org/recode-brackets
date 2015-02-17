@@ -12,7 +12,8 @@ define(function (require, exports, module) {
         FileSystem = brackets.getModule('filesystem/FileSystem'),
         ProjectManager = brackets.getModule('project/ProjectManager'),
         Dialogs = brackets.getModule('widgets/Dialogs'),
-        DefaultDialogs = brackets.getModule('widgets/DefaultDialogs');
+        DefaultDialogs = brackets.getModule('widgets/DefaultDialogs'),
+        ProjectModel = brackets.getModule('project/ProjectModel');
 
     var Recoder = function() {
         this.currentDocument = null;
@@ -33,6 +34,7 @@ define(function (require, exports, module) {
     Recoder.prototype.addDocument = function() {
         this.currentDocument = DocumentManager.getCurrentDocument();
         if (this.currentDocument) {
+            console.log(this.currentDocument);
             this.currentDocument.addRef();
             this.currentDocument.on('change', this.onTextChange);
         }
@@ -67,7 +69,7 @@ define(function (require, exports, module) {
             console.log(self.saveDir);
 
             ProjectManager
-                .createNewItem(ProjectManager.getProjectRoot(), 'recode-sessions/' + formatDate + '/', true, true);
+                .createNewItem(ProjectManager.getProjectRoot(), 'recode-sessions/' + formatDate + '/', true, true)
                 .done(startRecode);
         };
 
@@ -77,7 +79,7 @@ define(function (require, exports, module) {
                 return;
             }
 
-            if (file.isDirectory) {
+            if ((!file) || (file.isDirectory)) {
                 makeDirectory();
             } else {
                 Dialogs.showModalDialog(DefaultDialogs.DIALOG_ID_ERROR, 'Save Error', 'The entry "recode-sessions" at project root must be a directory, currently it is not.');
