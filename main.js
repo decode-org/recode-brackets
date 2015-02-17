@@ -16,10 +16,20 @@ define(function (require, exports, module) {
         ProjectModel = brackets.getModule('project/ProjectModel');
 
     var Recoder = function() {
+        var self = this;
+
         this.currentDocument = null;
         this.recording = false;
         this.saveDir = null;
         this.startTime = null;
+
+        this.onTextChangeProxy = function() {
+            Recoder.prototype.onTextChange.call(self, arguments);
+        };
+
+        this.onFileChangeProxy = function() {
+            Recoder.prototype.onFileChange.call(self, arguments);
+        }
     };
 
     Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
@@ -36,13 +46,13 @@ define(function (require, exports, module) {
         if (this.currentDocument) {
             console.log(this.currentDocument);
             this.currentDocument.addRef();
-            this.currentDocument.on('change', this.onTextChange);
+            this.currentDocument.on('change', this.onTextChangeProxy);
         }
     };
 
     Recoder.prototype.removeDocument = function() {
         if (this.currentDocument) {
-            this.currentDocument.off('change', this.onTextChange);
+            this.currentDocument.off('change', this.onTextChangeProxy);
             this.currentDocument.releaseRef();
         }
         this.currentDocument = null;
@@ -57,7 +67,7 @@ define(function (require, exports, module) {
         var startRecode = function startRecode() {
             self.recording = true;
 
-            MainViewManager.on('currentFileChange', self.onFileChange);
+            MainViewManager.on('currentFileChange', self.onFileChangeProxy);
             self.addDocument();
 
             callback();
@@ -91,7 +101,7 @@ define(function (require, exports, module) {
         this.recording = false;
 
         // Unbind events
-        MainViewManager.off('currentFileChange', this.onFileChange);
+        MainViewManager.off('currentFileChange', this.onFileChangeProxy);
         this.removeDocument();
     };
 
