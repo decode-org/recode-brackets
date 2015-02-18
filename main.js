@@ -22,7 +22,10 @@ define(function (require, exports, module) {
         this.recording = false;
         this.saveDir = null;
         this.startTime = null;
+        this.lastTime = null;
         this.trackedFiles = [];
+        this.trackedFileObjects = [];
+        this.actions = [];
 
         this.onTextChangeProxy = function() {
             Recoder.prototype.onTextChange.apply(self, arguments);
@@ -31,6 +34,19 @@ define(function (require, exports, module) {
         this.onFileChangeProxy = function() {
             Recoder.prototype.onFileChange.apply(self, arguments);
         }
+    };
+
+    Recoder.prototype.addEvent = function(e) {
+        var now = Date.now();
+        var difference = now - this.lastTime;
+
+        if (e.distance == null) {
+            e.distance = difference;
+        }
+
+        this.lastTime = now;
+
+        this.actions.push(e);
     };
 
     Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
@@ -44,14 +60,28 @@ define(function (require, exports, module) {
 
     Recoder.prototype.addDocument = function() {
         this.currentDocument = DocumentManager.getCurrentDocument();
-        console.log(this.currentDocument);
+
         if (this.currentDocument) {
+            var displayPath = ProjectManager.makeProjectRelativeIfPossible(this.currentDocument.file.fullPath);
+            var name = displayPath.replace(/\//g, '--');
+
+            this.addEvent({
+                data: name,
+                mode: 2
+            });
+
             if (this.trackedFiles.indexOf(this.currentDocument.file.fullPath) === -1) {
+                this.trackedFileObjects.push({
+                    path: name,
+                    name: displayPath
+                });
                 this.trackedFiles.push(this.currentDocument.file.fullPath);
-                var path = this.saveDir + ProjectManager.makeProjectRelativeIfPossible(this.currentDocument.file.fullPath).replace(/\//g, '--');
+                var path = this.saveDir + name;
                 var file = FileSystem.getFileForPath(path);
                 file.write(this.currentDocument.getText(), function(error, stats) {
-                    console.error("Error saving new Recode file: " + error);
+                    if (error) {
+                        console.error("Error saving new Recode file: " + error);
+                    }
                 });
             }
             this.currentDocument.addRef();
@@ -75,6 +105,8 @@ define(function (require, exports, module) {
 
         var startRecode = function startRecode() {
             self.recording = true;
+
+            self.startTime = self.lastTime = Date.now();
 
             MainViewManager.on('currentFileChange', self.onFileChangeProxy);
             self.addDocument();
@@ -106,12 +138,30 @@ define(function (require, exports, module) {
         });
     };
 
+    Recoder.prototype.save = function() {
+        var finaldata = { };
+
+        finaldata.files = this.trackedFileObjects;
+        finaldata.data = this.actions;
+
+        var savepath = this.saveDir + 'recodedata.json';
+        var file = FileSystem.getFileForPath(savepath);
+        file.write(JSON.stringify(finaldata), function(error, stats) {
+            if (error) {
+                console.error("Error saving new Recode data: " + error);
+            }
+        });
+    };
+
     Recoder.prototype.stop = function() {
         this.recording = false;
+
+        this.save();
 
         // Unbind events
         MainViewManager.off('currentFileChange', this.onFileChangeProxy);
         this.trackedFiles = [];
+        this.actions = [];
         this.removeDocument();
     };
 
