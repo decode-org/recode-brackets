@@ -54,7 +54,69 @@ define(function (require, exports, module) {
         this.addDocument();
     };
 
+    // This function *tries* to handle multiple selections
+    // Proper tests need to be built to make sure that actually works
     Recoder.prototype.onTextChange = function(e, document, changelist) {
+        var first = true;
+
+        // Make sure the changes are in order
+        // So we can adjust for changes in position
+        // As all changes are in in pre-change coordinates
+        if (changelist.length > 1) {
+            changelist = changelist.slice().sort(function(a, b) {
+                if ((a.to.line > b.from.line) || ((a.to.line == b.from.line) && (a.to.ch > b.from.ch))) {
+                    return 1;
+                } else if ((a.to.line == b.from.line) && (a.to.ch == b.from.ch)) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            });
+        }
+
+        var offsets = { },
+            rowOffset = 0;
+
+        for (var i in changelist) {
+            var change = changelist[i];
+
+            var offset = 0;
+
+            if (!first) {
+                offset = offsets[String(change.from.line)] || 0;
+            }
+
+            var event = {
+                data: change.text,
+                position: {
+                    row: change.from.line,
+                    col: change.from.ch + offset
+                },
+                length: {
+                    row: change.to.line - change.from.line,
+                    col: (change.to.ch + ((change.from.line == change.to.line) ? offset : 0)) - (change.from.ch + offset)
+                },
+                mode: 0
+            };
+
+            var addOffset = change.text[change.text.length - 1].length - ((change.from.line == change.to.line)
+                ? change.to.ch - change.from.ch
+                : change.to.ch);
+
+            offsets[String(change.to.line)] = (offsets[String(change.to.line)] || 0) + addOffset;
+
+            // It appears that line values are in a post-change coordinate system
+            //rowOffset += change.text.length - (change.to.line - change.from.line);
+
+            if (!first) {
+                event.distance = 0;
+            }
+
+            this.addEvent(event);
+            console.log(event);
+
+            first = false;
+        }
         console.log(changelist);
     };
 
@@ -142,7 +204,7 @@ define(function (require, exports, module) {
         var finaldata = { };
 
         finaldata.files = this.trackedFileObjects;
-        finaldata.data = this.actions;
+        finaldata.recorded = this.actions;
 
         var savepath = this.saveDir + 'recodedata.json';
         var file = FileSystem.getFileForPath(savepath);
