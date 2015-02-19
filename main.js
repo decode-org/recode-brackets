@@ -27,13 +27,9 @@ define(function (require, exports, module) {
         this.trackedFileObjects = [];
         this.actions = [];
 
-        this.onTextChangeProxy = function() {
-            Recoder.prototype.onTextChange.apply(self, arguments);
-        };
-
-        this.onFileChangeProxy = function() {
-            Recoder.prototype.onFileChange.apply(self, arguments);
-        }
+        this.onTextChangeProxy = Recoder.prototype.onTextChange.bind(this);
+        this.onFileChangeProxy = Recoder.prototype.onFileChange.bind(this);
+        this.onSelectionChangeProxy = Recoder.prototype.onSelectionChange.bind(this);
     };
 
     Recoder.prototype.addEvent = function(e) {
@@ -119,6 +115,10 @@ define(function (require, exports, module) {
         }
         console.log(changelist);
     };
+
+    Recoder.prototype.onSelectionChange = function(e) {
+        console.log(arguments);
+    }
 
     Recoder.prototype.addDocument = function() {
         this.currentDocument = DocumentManager.getCurrentDocument();
