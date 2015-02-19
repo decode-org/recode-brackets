@@ -109,11 +109,9 @@ define(function (require, exports, module) {
             }
 
             this.addEvent(event);
-            console.log(event);
 
             first = false;
         }
-        console.log(changelist);
     };
 
     Recoder.prototype.onSelectionChange = function(e) {
@@ -179,7 +177,6 @@ define(function (require, exports, module) {
         var makeDirectory = function makeDirectory() {
             self.startTime = now.getTime();
             self.saveDir = recodeFolder + formatDate + '/';
-            console.log(self.saveDir);
 
             ProjectManager
                 .createNewItem(ProjectManager.getProjectRoot(), 'recode-sessions/' + formatDate + '/', true, true)
