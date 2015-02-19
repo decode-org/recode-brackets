@@ -39,9 +39,8 @@ define(function (require, exports, module) {
 
         if (e.distance == null) {
             e.distance = difference;
+            this.lastTime = now;
         }
-
-        this.lastTime = now;
 
         this.actions.push(e);
     };
@@ -103,7 +102,7 @@ define(function (require, exports, module) {
             offsets[String(change.to.line)] = (offsets[String(change.to.line)] || 0) + addOffset;
 
             // It appears that line values are in a post-change coordinate system
-            //rowOffset += change.text.length - (change.to.line - change.from.line);
+            // rowOffset += change.text.length - (change.to.line - change.from.line);
 
             if (!first) {
                 event.distance = 0;
@@ -115,8 +114,24 @@ define(function (require, exports, module) {
         }
     };
 
-    Recoder.prototype.onSelectionChange = function(e) {
-        console.log(arguments);
+    Recoder.prototype.onSelectionChange = function(e, editor) {
+        var sel = this.currentEditor.getSelection ();
+
+        if (sel != null) {
+            var event = {
+                mode: 1,
+                position: {
+                    row: sel.reversed ? sel.end.line : sel.start.line,
+                    col: sel.reversed ? sel.end.ch : sel.start.ch
+                },
+                length: {
+                    row: (sel.reversed ? -1 : 1) * (sel.end.line - sel.start.line),
+                    col: (sel.reversed ? -1 : 1) * (sel.end.ch - sel.start.ch)
+                }
+            };
+
+            this.addEvent(event);
+        }
     }
 
     Recoder.prototype.addDocument = function() {
@@ -149,11 +164,14 @@ define(function (require, exports, module) {
             }
             this.currentDocument.addRef();
             this.currentDocument.on('change', this.onTextChangeProxy);
+            this.currentEditor.on('cursorActivity', this.onSelectionChangeProxy);
+            this.onSelectionChange();
         }
     };
 
     Recoder.prototype.removeDocument = function() {
         if (this.currentEditor) {
+            this.currentEditor.off('cursorActivity', this.onSelectionChangeProxy);
             this.currentDocument.off('change', this.onTextChangeProxy);
             this.currentDocument.releaseRef();
         }
