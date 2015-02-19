@@ -8,6 +8,7 @@ define(function (require, exports, module) {
     var CommandManager = brackets.getModule('command/CommandManager'),
         Menus = brackets.getModule('command/Menus'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
+        EditorManager = brackets.getModule('editor/EditorManager'),
         DocumentManager = brackets.getModule('document/DocumentManager'),
         FileSystem = brackets.getModule('filesystem/FileSystem'),
         ProjectManager = brackets.getModule('project/ProjectManager'),
@@ -28,7 +29,7 @@ define(function (require, exports, module) {
         this.actions = [];
 
         this.onTextChangeProxy = Recoder.prototype.onTextChange.bind(this);
-        this.onFileChangeProxy = Recoder.prototype.onFileChange.bind(this);
+        this.onActiveEditorChangeProxy = Recoder.prototype.onActiveEditorChange.bind(this);
         this.onSelectionChangeProxy = Recoder.prototype.onSelectionChange.bind(this);
     };
 
@@ -45,7 +46,7 @@ define(function (require, exports, module) {
         this.actions.push(e);
     };
 
-    Recoder.prototype.onFileChange = function(e, newFile, newPaneId, oldFile, oldPaneId) {
+    Recoder.prototype.onActiveEditorChange = function(e, editorGainingFocus, editorLosingFocus) {
         this.removeDocument();
         this.addDocument();
     };
@@ -119,9 +120,11 @@ define(function (require, exports, module) {
     }
 
     Recoder.prototype.addDocument = function() {
-        this.currentDocument = DocumentManager.getCurrentDocument();
+        this.currentEditor = EditorManager.getActiveEditor();
 
-        if (this.currentDocument) {
+        if (this.currentEditor) {
+            this.currentDocument = this.currentEditor.document;
+
             var displayPath = ProjectManager.makeProjectRelativeIfPossible(this.currentDocument.file.fullPath);
             var name = displayPath.replace(/\//g, '--');
 
@@ -150,11 +153,12 @@ define(function (require, exports, module) {
     };
 
     Recoder.prototype.removeDocument = function() {
-        if (this.currentDocument) {
+        if (this.currentEditor) {
             this.currentDocument.off('change', this.onTextChangeProxy);
             this.currentDocument.releaseRef();
         }
         this.currentDocument = null;
+        this.currentEditor = null;
     };
 
     Recoder.prototype.start = function(callback) {
@@ -168,7 +172,7 @@ define(function (require, exports, module) {
 
             self.startTime = self.lastTime = Date.now();
 
-            MainViewManager.on('currentFileChange', self.onFileChangeProxy);
+            EditorManager.on('activeEditorChange', self.onActiveEditorChangeProxy);
             self.addDocument();
 
             callback();
@@ -218,7 +222,7 @@ define(function (require, exports, module) {
         this.save();
 
         // Unbind events
-        MainViewManager.off('currentFileChange', this.onFileChangeProxy);
+        EditorManager.off('activeEditorChange', this.onActiveEditorChangeProxy);
         this.trackedFiles = [];
         this.actions = [];
         this.removeDocument();
