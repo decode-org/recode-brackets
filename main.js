@@ -182,7 +182,12 @@ define(function (require, exports, module) {
     Recoder.prototype.start = function(callback) {
         var self = this;
         var now = new Date();
-        var formatDate = (now.getFullYear()) + '-' + (now.getMonth() + 1) + '-' + (now.getDate()) + '_' + (now.getHours()) + '-' + (now.getMinutes()) + '-' + (now.getSeconds());
+        var formatDate = (now.getFullYear()) + '-'
+            + (helper.addTrailingZeros(now.getMonth() + 1, 2)) + '-'
+            + (helper.addTrailingZeros(now.getDate(), 2)) + '_'
+            + (helper.addTrailingZeros(now.getHours(), 2)) + '-'
+            + (helper.addTrailingZeros(now.getMinutes(), 2)) + '-'
+            + (helper.addTrailingZeros(now.getSeconds(), 2));
         var recodeFolder = ProjectManager.getProjectRoot().fullPath + 'recode-sessions/';
 
         var startRecode = function startRecode() {
@@ -249,6 +254,17 @@ define(function (require, exports, module) {
 
 
     var recoder = new Recoder();
+    var helper = {
+        addTrailingZeros: function(num, length) {
+            var str = String(num);
+
+            while (str.length < length) {
+                str = "0" + str;
+            }
+
+            return str;
+        }
+    };
 
     // Function to run when the menu item is clicked
     function handleRecode() {
