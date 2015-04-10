@@ -56,63 +56,43 @@ define(function (require, exports, module) {
     Recoder.prototype.onTextChange = function(e, document, changelist) {
         var first = true;
 
-        // Make sure the changes are in order
-        // So we can adjust for changes in position
-        // As all changes are in in pre-change coordinates
+        // Make sure the changes are in reverse order
+        // So we don't have to worry about post-change
+        // Cordinates
         if (changelist.length > 1) {
-            changelist = changelist.slice().sort(function(a, b) {
-                if ((a.to.line > b.from.line) || ((a.to.line == b.from.line) && (a.to.ch > b.from.ch))) {
-                    return 1;
-                } else if ((a.to.line == b.from.line) && (a.to.ch == b.from.ch)) {
-                    return 0;
-                } else {
-                    return -1;
-                }
-            });
+          changelist = changelist.slice().sort(function (a, b) {
+              if ((a.to.line > b.from.line) || ((a.to.line == b.from.line) && (a.to.ch > b.from.ch))) {
+                  return -1;
+              } else if ((a.to.line == b.from.line) && (a.to.ch == b.from.ch)) {
+                  return 0;
+              } else {
+                  return 1;
+              }
+          });
         }
 
-        var offsets = { },
-            rowOffset = 0;
-
-        for (var i in changelist) {
-            var change = changelist[i];
-
-            var offset = 0;
-
-            if (!first) {
-                offset = offsets[String(change.from.line)] || 0;
-            }
-
+        changelist.forEach(function(change) {
             var event = {
-                data: change.text,
-                position: {
-                    row: change.from.line,
-                    col: change.from.ch + offset
-                },
-                length: {
-                    row: change.to.line - change.from.line,
-                    col: (change.to.ch + ((change.from.line == change.to.line) ? offset : 0)) - (change.from.ch + offset)
-                },
-                mode: 0
+              data: change.text,
+              position: {
+                  row: change.from.line,
+                  col: change.from.ch
+              },
+              length: {
+                  row: change.to.line - change.from.line,
+                  col: change.to.ch  - change.from.ch
+              },
+              mode: 0
             };
-
-            var addOffset = change.text[change.text.length - 1].length - ((change.from.line == change.to.line)
-                ? change.to.ch - change.from.ch
-                : change.to.ch);
-
-            offsets[String(change.to.line)] = (offsets[String(change.to.line)] || 0) + addOffset;
-
-            // It appears that line values are in a post-change coordinate system
-            // rowOffset += change.text.length - (change.to.line - change.from.line);
 
             if (!first) {
                 event.distance = 0;
             }
 
-            this.addEvent(event);
+            recoder.addEvent(event);
 
             first = false;
-        }
+        });
     };
 
     Recoder.prototype.onSelectionChange = function(e, editor) {
