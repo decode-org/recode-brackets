@@ -1,0 +1,13 @@
+.recode-toolbar-circle {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background-color: #BBBBBB;
+  transition: background-color 0.5s;
+}
+
+#recode-toolbar-icon.active .recode-toolbar-circle {
+  background-color: #78B2F2;
+}

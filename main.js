@@ -6,7 +6,8 @@ define(function (require, exports, module) {
     "use strict";
 
     var CommandManager = brackets.getModule('command/CommandManager'),
-        Menus = brackets.getModule('command/Menus');
+        Menus = brackets.getModule('command/Menus'),
+        ExtensionUtils = brackets.getModule('utils/ExtensionUtils');
 
     var Recoder = require('recoder');
 
@@ -17,9 +18,11 @@ define(function (require, exports, module) {
         if (!recoder.recording) {
             recoder.start(function() {
                 command.setName('Stop Recoding');
+                $icon.addClass('active');
             });
         } else {
             recoder.stop();
+            $icon.removeClass('active');
             command.setName('Recode');
         }
     }
@@ -30,10 +33,13 @@ define(function (require, exports, module) {
 
     // Then create a menu item bound to the command
     // The label of the menu item is the name we gave the command (see above)
-    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
-    menu.addMenuItem(RECODE_COMMAND_ID);
 
-    // We could also add a key binding at the same time:
-    //menu.addMenuItem(MY_COMMAND_ID, "Ctrl-Alt-H");
+    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
+    menu.addMenuItem(RECODE_COMMAND_ID, "Ctrl-Alt-T");
+
+    var $icon = $('<a id="recode-toolbar-icon"><span class="recode-toolbar-circle"></span></a>');
+    $icon.appendTo($('#main-toolbar .buttons'));
+    $icon.click(handleRecode);
+    ExtensionUtils.loadStyleSheet(module, 'main.css');
     // (Note: "Ctrl" is automatically mapped to "Cmd" on Mac)
 });
