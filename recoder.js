@@ -89,10 +89,10 @@ define(function (require, exports, module) {
                 event.distance = 0;
             }
 
-            recoder.addEvent(event);
+            this.addEvent(event);
 
             first = false;
-        });
+        }.bind(this));
     };
 
     Recoder.prototype.onSelectionChange = function(e, editor) {
