@@ -56,21 +56,8 @@ define(function (require, exports, module) {
     Recoder.prototype.onTextChange = function(e, document, changelist) {
         var first = true;
 
-        // Make sure the changes are in reverse order
-        // So we don't have to worry about post-change
-        // Cordinates
-        if (changelist.length > 1) {
-          changelist = changelist.slice().sort(function (a, b) {
-              if ((a.to.line > b.from.line) || ((a.to.line == b.from.line) && (a.to.ch > b.from.ch))) {
-                  return -1;
-              } else if ((a.to.line == b.from.line) && (a.to.ch == b.from.ch)) {
-                  return 0;
-              } else {
-                  return 1;
-              }
-          });
-        }
-
+        // Codemirror gives us the list of changes already sorted correctly
+        // Just handle it as it comes
         changelist.forEach(function(change) {
             var event = {
               data: change.text,
